@@ -15,6 +15,7 @@ import cv2
 import numpy as np
 import torch
 import zlib
+import open3d as o3d
 
 # add project directory to python path to enable relative imports
 import os
@@ -33,22 +34,42 @@ import misc.objdet_tools as tools
 
 # visualize lidar point-cloud
 def show_pcl(pcl):
-
     ####### ID_S1_EX2 START #######     
     #######
     print("student task ID_S1_EX2")
+    def next_frame_callback(vis_lidar_pc):
+        vis_lidar_pc.close()
+        global show_pcl_window
+        show_pcl_window = True
+
+    def exit_callback(vis_lidar_pc):
+        vis_lidar_pc.close()
+        global show_pcl_window
+        show_pcl_window = False
 
     # step 1 : initialize open3d with key callback and create window
+    visual_pc = o3d.visualization.VisualizerWithKeyCallback()
+    # Press the right arrow to exit
+    visual_pc.register_key_callback(262, exit_callback)
+    # Press the space bar to continue to the next frame
+    visual_pc.register_key_callback(32, next_frame_callback)
+    visual_pc.create_window(window_name="Visual Point Cloud",
+                            visible=True)
     
     # step 2 : create instance of open3d point-cloud class
+    pcd = o3d.geometry.PointCloud()
 
     # step 3 : set points in pcd instance by converting the point-cloud into 3d vectors (using open3d function Vector3dVector)
+    pcd.points = o3d.utility.Vector3dVector(pcl[:, :3])
 
     # step 4 : for the first frame, add the pcd instance to visualization using add_geometry; for all other frames, use update_geometry instead
-    
-    # step 5 : visualize point cloud and keep window open until right-arrow is pressed (key-code 262)
+    visual_pc.add_geometry(pcd)
+    visual_pc.run()
+    try: 
+        return show_pcl_window
+    except NameError as e:
+        return True
 
-    #######
     ####### ID_S1_EX2 END #######     
        
 
@@ -84,8 +105,7 @@ def show_range_image(frame, lidar_name):
 
     # step 6 : stack the range and intensity image vertically using np.vstack and convert the result to an unsigned 8-bit integer
     stacked_img = np.vstack((ri_range, ri_intensity))
-    print(stacked_img.shape)
-    
+
     ####### ID_S1_EX1 END #######     
     
     return stacked_img
