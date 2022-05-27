@@ -1,0 +1,4 @@
+tools/objdet_models/*/pretrained
+dataset
+results
+.DS_Store
