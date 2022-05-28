@@ -196,7 +196,6 @@ def bev_from_pcl(lidar_pcl, configs):
     ## step 2 : assign the height value of each unique entry in lidar_top_pcl to the height map 
     ##          make sure that each entry is normalized on the difference between the upper and lower height defined in the config file
     ##          use the lidar_pcl_top data structure from the previous task to access the pixels of the height_map
-    print(configs)
     height_map[inds[:, 0], inds[:, 1]] = lidar_pcl_top[:, 2] / (configs.lim_z[1] - configs.lim_z[0]) 
 
     ## step 3 : temporarily visualize the intensity map using OpenCV to make sure that vehicles separate well from the background
