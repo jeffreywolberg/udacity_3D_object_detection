@@ -42,6 +42,61 @@ def measure_detection_performance(detections, labels, labels_valid, min_iou=0.5)
         matches_lab_det = []
         if valid: # exclude all labels from statistics which are not considered valid
             
+            for det in detections:
+                box = label.box
+                rx = box.center_x + box.width/2
+                lx = box.center_x - box.width/2
+                ty = box.center_y - box.length/2
+                by = box.center_y + box.length/2
+                tz = box.center_z + box.height/2
+                bz = box.center_z - box.height/2
+                tr, tl, bl, br = (rx, ty), (lx, ty), (lx, by), (rx, by)
+                gt_rect = Polygon([bl, br, tr, tl])
+                # _, bev_x, bev_y, z, h, bev_w, bev_l, yaw = det
+                _, x, y, z, w, l, h, _ = det
+                det_lx = x
+                det_rx = x + w
+                det_ty = y
+                det_by = y + l
+                det_tr, det_tl, det_bl, det_br = (det_rx, det_ty), (det_lx, det_ty), (det_lx, det_by), (det_rx, det_by)
+                det_rect = Polygon([det_bl, det_br, det_tr, det_tl])
+
+                get_x_coord = lambda tup: tup[0]
+                get_y_coord = lambda tup: tup[1]
+                rightmost_left = max(bl, det_bl, key=get_x_coord)[0]
+                leftmost_right = min(br, det_br, key=get_x_coord)[0]
+                topmost_bottom = min(bl, det_bl, key=get_y_coord)[1]
+                bottommost_top = max(tl, det_tl, key=get_y_coord)[1]
+                iou_tr, iou_tl, iou_bl, iou_br = (leftmost_right, bottommost_top), (rightmost_left, bottommost_top), (rightmost_left, topmost_bottom), (leftmost_right, topmost_bottom)
+                
+                import cv2
+                img = np.zeros((70, 70, 3))
+                print([tr, tl, bl, br])
+                print([det_tr, det_tl, det_bl, det_br])
+                print([iou_tr, iou_tl, iou_bl, iou_br])
+                img = cv2.polylines(img, [np.array([tr, tl, bl, br]).astype(np.int32)], isClosed=True, color=[0, 255, 0], thickness=2)
+                img = cv2.polylines(img, [np.array([det_tr, det_tl, det_bl, det_br]).astype(np.int32)], isClosed=True, color=[255, 0, 0], thickness=2)
+                color = [255, 255, 255] if leftmost_right-rightmost_left >= 0 and bottommost_top-topmost_bottom else [0, 0, 255]
+                img = cv2.polylines(img, [np.array([iou_tr, iou_tl, iou_bl, iou_br]).astype(np.int32)], isClosed=True, color=color, thickness=1)
+
+                if leftmost_right-rightmost_left >= 0 and bottommost_top-topmost_bottom:
+                    intersection = abs(iou_tr[0]-iou_tl[0]) * abs(iou_tr[1] - iou_br[1])
+                    union = abs(tr[0]-tl[0]) * abs(tr[1] - br[1]) + abs(det_tr[0]-det_tl[0]) * abs(det_tr[1] - det_br[1]) - intersection
+                    calc_intersection = gt_rect.intersection(det_rect)
+                    calc_union = gt_rect.union(det_rect)
+                    print("My intersection: ", intersection)
+                    print("Calculated intersection", calc_intersection.area)
+                    print("My union:", union)
+                    print("Calculated union:", calc_union.area)
+        
+                cv2.imshow("Im", img)
+                cv2.waitKey(0)
+
+
+
+
+
+            
             # compute intersection over union (iou) and distance between centers
 
             ####### ID_S4_EX1 START #######     
