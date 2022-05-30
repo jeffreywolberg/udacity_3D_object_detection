@@ -67,7 +67,10 @@ def load_configs_model(model_name='darknet', configs=None):
         print("student task ID_S3_EX1-3")
         configs.saved_fn = 'fpn_resnet_18'
         configs.arch = 'fpn_resnet_18'
-        configs.pretrained_filename = "tools/objdet_models/resnet/pretrained/fpn_resnet_18_epoch_300.pth"
+        configs.model_path = configs.model_path = os.path.join(
+            parent_path, 'tools', 'objdet_models', 'resnet')
+        configs.pretrained_filename = os.path.join(
+            configs.model_path, 'pretrained', 'fpn_resnet_18_epoch_300.pth')
         configs.K = 50
         configs.no_cuda = True
         configs.gpu_idx = 0
@@ -242,6 +245,8 @@ def detect_objects(input_bev_maps, model, configs):
                                 outputs['dim'], K=configs.K)
             detections = detections.cpu().numpy().astype(np.float32)
             detections = post_processing(detections, configs)
+            detections = detections[0][1]
+    
 
             print("student task ID_S3_EX1-5")
 
@@ -254,46 +259,36 @@ def detect_objects(input_bev_maps, model, configs):
     print("student task ID_S3_EX2")
     objects = []
 
-    for detection in detections:
-        # format for darknet
-        if isinstance(detection, list):
-            dets = [detection]
-        # format for resnet
-        elif isinstance(detection, dict):
-            dets = [v for key, val in detection.items() for v in val]
-        else:
-            raise NotImplementedError("Detection data structure not recognized")
-        for det in dets:
-            # step 1 : check whether there are any detections
-            if len(det) > 0:
-                # step 2 : loop over all detections
-                    _, bev_x, bev_y, z, h, bev_w, bev_l, yaw = det
-                    # print("X:", bev_x, "Y:", bev_y, "Z:", z, "H:",
-                    #       h, "W:", bev_w, "L:", bev_l, "yaw:", yaw)
-                    # print("Lim x:", configs.lim_x,
-                    #       "Lim y:", configs.lim_y,
-                    #       "Lim z:", configs.lim_z,
-                    #       "Bev width:", configs.bev_width,
-                    #       "Bev_height", configs.bev_height,
-                    #       )
-                    # step 3 : perform the conversion using the limits for x, y and z set in the configs structure
-                    x = bev_y / configs.bev_height * \
-                        (configs.lim_x[1] - configs.lim_x[0])
-                    y = bev_x / configs.bev_width * \
-                        (configs.lim_y[1] - configs.lim_y[0]) - \
-                        (configs.lim_y[1] - configs.lim_y[0])/2.0
-                    w = bev_w / configs.bev_width * \
-                        (configs.lim_y[1] - configs.lim_y[0])
-                    l = bev_l / configs.bev_height * \
-                        (configs.lim_x[1] - configs.lim_x[0])
-                    if ((x >= configs.lim_x[0]) and (x <= configs.lim_x[1])
-                        and (y >= configs.lim_y[0]) and (y <= configs.lim_y[1])
-                            and (z >= configs.lim_z[0]) and (z <= configs.lim_z[1])):
-                        # step 4 : append the current object to the 'objects' array
-                        # print("Final detection", [1, x, y, z, h, w, l, yaw])
-                        objects.append([1, x, y, z, h, w, l, yaw])
+    for det in detections:
+        # step 1 : check whether there are any detections
+        if len(det) > 0:
+            # step 2 : loop over all detections
+                _, bev_x, bev_y, z, h, bev_w, bev_l, yaw = det
+                # print("X:", bev_x, "Y:", bev_y, "Z:", z, "H:",
+                #       h, "W:", bev_w, "L:", bev_l, "yaw:", yaw)
+                # print("Lim x:", configs.lim_x,
+                #       "Lim y:", configs.lim_y,
+                #       "Lim z:", configs.lim_z,
+                #       "Bev width:", configs.bev_width,
+                #       "Bev_height", configs.bev_height,
+                #       )
+                # step 3 : perform the conversion using the limits for x, y and z set in the configs structure
+                x = bev_y / configs.bev_height * \
+                    (configs.lim_x[1] - configs.lim_x[0])
+                y = bev_x / configs.bev_width * \
+                    (configs.lim_y[1] - configs.lim_y[0]) + configs.lim_y[0]
+                z = z + configs.lim_z[0]
+                w = bev_w / configs.bev_width * \
+                    (configs.lim_y[1] - configs.lim_y[0])
+                l = bev_l / configs.bev_height * \
+                    (configs.lim_x[1] - configs.lim_x[0])
+                if ((x >= configs.lim_x[0]) and (x <= configs.lim_x[1])
+                    and (y >= configs.lim_y[0]) and (y <= configs.lim_y[1])
+                        and (z >= configs.lim_z[0]) and (z <= configs.lim_z[1])):
+                    # step 4 : append the current object to the 'objects' array
+                    # print("Final detection", [1, x, y, z, h, w, l, yaw])
+                    objects.append([1, x, y, z, h, w, l, yaw])
 
     #######
     ####### ID_S3_EX2 END #######
-
     return objects
