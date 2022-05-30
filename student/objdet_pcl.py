@@ -96,6 +96,7 @@ def show_range_image(frame, lidar_name):
     ri_range = ri_range * 255 / (np.amax(ri_range) - np.amin(ri_range))
     ri_range = ri_range.astype(np.uint8)
 
+
     # step 5 : map the intensity channel onto an 8-bit scale and normalize with the difference between the 1- and 99-percentile to mitigate the influence of outliers
     ri_intensity = ri[:,:,1]
     intensity_1_pctile = np.percentile(ri_intensity, 1)
