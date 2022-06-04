@@ -180,13 +180,14 @@ def pcl_from_range_image(frame, lidar_name):
     # extract lidar data and range image
     lidar = waymo_utils.get(frame.lasers, lidar_name)
     range_image, camera_projection, range_image_pose = waymo_utils.parse_range_image_and_camera_projection(lidar)    # Parse the top laser range image and get the associated projection.
-
+    # print(range_image.shape)
     # Convert the range image to a point cloud
     lidar_calib = waymo_utils.get(frame.context.laser_calibrations, lidar_name)
     pcl, pcl_attr = project_to_pointcloud(frame, range_image, camera_projection, range_image_pose, lidar_calib)
 
     # stack point cloud and lidar intensity
     points_all = np.column_stack((pcl, pcl_attr[:, 1]))
+    # print(points_all.shape)
 
     return points_all
 

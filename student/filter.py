@@ -11,82 +11,111 @@
 #
 
 # imports
+import misc.params as params
 import numpy as np
 
 # add project directory to python path to enable relative imports
 import os
 import sys
+from student.measurements import Measurement, Sensor
+
+from student.trackmanagement import Track
 PACKAGE_PARENT = '..'
-SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+SCRIPT_DIR = os.path.dirname(os.path.realpath(
+    os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
-import misc.params as params 
+
 
 class Filter:
     '''Kalman filter class'''
+
     def __init__(self):
-        pass
+        self.dt = params.dt
+        self.q = params.q  # process noise variable for Kalman filter Q
 
     def F(self):
         ############
-        # TODO Step 1: implement and return system matrix F
+        # Step 1: implement and return system matrix F
         ############
+        return np.matrix([
+        [1, 0, 0, self.dt, 0, 0], 
+        [0, 1, 0, 0, self.dt, 0], 
+        [0, 0, 1, 0, 0, self.dt], 
+        [0, 0, 0, 1, 0, 0], 
+        [0, 0, 0, 0, 1, 0], 
+        [0, 0, 0, 0, 0, 1]])
 
-        return 0
-        
         ############
         # END student code
-        ############ 
+        ############
 
     def Q(self):
         ############
-        # TODO Step 1: implement and return process noise covariance Q
+        # Step 1: implement and return process noise covariance Q
         ############
-
-        return 0
-        
-        ############
-        # END student code
-        ############ 
-
-    def predict(self, track):
-        ############
-        # TODO Step 1: predict state x and estimation error covariance P to next timestep, save x and P in track
-        ############
-
-        pass
-        
+        q = self.q
+        dt = self.dt
+        return np.matrix([
+            [q/3*dt**3, 0, 0, q/2*dt**2, 0, 0],
+            [0, q/3*dt**3, 0, 0, q/2*dt**2, 0],
+            [0, 0, q/3*dt**3, 0, 0, q/2*dt**2],
+            [q/2*dt**2, 0, 0, q * dt, 0, 0],
+            [0, q/2*dt**2, 0, 0, q*dt, 0],
+            [0, 0, q/2*dt**2, 0, 0, q*dt],
+        ])
         ############
         # END student code
-        ############ 
+        ############
 
-    def update(self, track, meas):
+    def predict(self, track: Track):    
+        ############
+        # Step 1: predict state x and estimation error covariance P to next timestep, save x and P in track
+        ############
+        F = self.F()
+        Q = self.Q()
+        x = F * track.x
+        P = F * track.P * F.T + Q
+
+        track.set_x(x)
+        track.set_P(P)
+        ############
+        # END student code
+        ############
+
+    def update(self, track:Track, meas:Measurement):
         ############
         # TODO Step 1: update state x and covariance P with associated measurement, save x and P in track
         ############
-        
+        sensor:Sensor = meas.sensor
+        gamma = self.gamma(track, meas)
+        H = sensor.get_H(track.x)
+        S = self.S(track, meas, H)
+        K = track.P * H.T * np.linalg.inv(S) # Kalman Gain
+        x = track.x + K * gamma
+        P = (np.identity(6) - K*H) * track.P
+
+        track.set_x(x)
+        track.set_P(P)
         ############
         # END student code
-        ############ 
+        ############
         track.update_attributes(meas)
-    
-    def gamma(self, track, meas):
-        ############
-        # TODO Step 1: calculate and return residual gamma
-        ############
 
-        return 0
-        
+    def gamma(self, track:Track, meas:Measurement):
+        ############
+        # Step 1: calculate and return residual gamma
+        ############
+        sensor:Sensor = meas.sensor
+        return meas.z - sensor.get_hx(track.x)
         ############
         # END student code
-        ############ 
-
-    def S(self, track, meas, H):
-        ############
-        # TODO Step 1: calculate and return covariance of residual S
         ############
 
-        return 0
-        
+    def S(self, track : Track, meas : Measurement, H):
+        ############
+        # Step 1: calculate and return covariance of residual S
+        ############
+        return H * track.P * H.T + meas.R
         ############
         # END student code
-        ############ 
+        ############
