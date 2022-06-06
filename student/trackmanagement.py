@@ -48,7 +48,7 @@ class Track:
         self.P[3:, 3:] = np.diag([sigma_vx, sigma_vy, sigma_vz])
 
         ############
-        # TODO Step 2: initialization:
+        # Step 2: initialization:
         # - replace fixed track initialization values by initialization of x and P based on 
         # unassigned measurement transformed from sensor to vehicle coordinates
         # - initialize track state and track score with appropriate values
@@ -127,12 +127,26 @@ class Trackmanagement:
                 sensor:Sensor = meas_list[0].sensor
                 if sensor.in_fov(track.x):
                     track.score -= (1/params.window)
+        
+        
+
             # print(track.P)
         for track in self.track_list:
             if track.state == 'confirmed' and track.score < params.delete_threshold:
                 self.delete_track(track)
-            if track.state != 'confirmed' and (track.P[(0,1), (0,1)] >= params.max_P).any():
+            elif track.state != 'confirmed' and (track.P[(0,1), (0,1)] >= params.max_P).any():
                 self.delete_track(track)
+            elif track.score < (1/params.window):
+                self.delete_track(track)
+            # elif track.x[0] < config_det.lim_x[0] or track.x[0] > config_det.lim_x[1]:
+            #     track.score -= (1/params.window)
+            # elif track.x[1] < config_det.lim_y[0] or track.x[1] > config_det.lim_y[1]:
+            #     track.score -= (1/params.window)
+            
+            
+            # elif track.score < .1:
+                # self.delete_track(track)
+            
         # delete old tracks   
 
         ############

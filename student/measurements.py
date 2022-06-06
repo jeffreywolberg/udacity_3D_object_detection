@@ -12,6 +12,7 @@
 
 # imports
 import numpy as np
+import math
 
 # add project directory to python path to enable relative imports
 import os
@@ -42,14 +43,20 @@ class Sensor:
         self.veh_to_sens = np.linalg.inv(self.sens_to_veh) # transformation vehicle to sensor coordinates
     
     def in_fov(self, x):
+        array_item = lambda x: x.item()
+        homog_coords = np.array([*map(array_item, x[:3]), 1]).reshape(-1, 1)
+        sens_coords = self.sens_to_veh * homog_coords
+        x, y = sens_coords[0], sens_coords[1]
+        ang = np.arctan(y/x)
+        if ang >= self.fov[0] and ang <= self.fov[1]:
+            return True
+        return False
         # check if an object x can be seen by this sensor
         ############
-        # TODO Step 4: implement a function that returns True if x lies in the sensor's field of view, 
+        # Step 4: implement a function that returns True if x lies in the sensor's field of view, 
         # otherwise False.
         ############
 
-        return True
-        
         ############
         # END student code
         ############ 
@@ -62,16 +69,26 @@ class Sensor:
             pos_sens = self.veh_to_sens*pos_veh # transform from vehicle to lidar coordinates
             return pos_sens[0:3]
         elif self.name == 'camera':
-            
+            pos_veh = np.ones((4,1))
+            pos_veh[:3] = x[:3]
+            pos_sens = self.veh_to_sens * pos_veh
+            h = np.zeros((2,1))
+            array_item = lambda x: x.item()
+            px, py, pz = map(array_item, pos_sens[:3])
+            try:
+                h[0] = self.c_i - self.f_i*py/px
+                h[1] = self.c_j - self.f_j*pz/px
+            except ZeroDivisionError as e:
+                print("Can't divide by 0 when computing h(x) for camera:", e)
+                raise ZeroDivisionError
+            return h
             ############
-            # TODO Step 4: implement nonlinear camera measurement function h:
+            # Step 4: implement nonlinear camera measurement function h:
             # - transform position estimate from vehicle to camera coordinates
             # - project from camera to image coordinates
             # - make sure to not divide by zero, raise an error if needed
             # - return h(x)
             ############
-
-            pass
         
             ############
             # END student code
@@ -115,9 +132,13 @@ class Sensor:
         # TODO Step 4: remove restriction to lidar in order to include camera as well
         ############
         
-        if self.name == 'lidar':
-            meas = Measurement(num_frame, z, self)
-            meas_list.append(meas)
+        # if self.name == 'lidar':
+        #     meas = Measurement(num_frame, z, self)
+        #     meas_list.append(meas)
+
+        meas = Measurement(num_frame, z, self)
+        meas_list.append(meas)
+
         return meas_list
         
         ############
@@ -151,13 +172,19 @@ class Measurement:
             self.height = z[3]
             self.yaw = z[6]
         elif sensor.name == 'camera':
+            self.z = np.zeros((sensor.dim_meas,1)) # measurement vector
+            self.z[0] = z[0]
+            self.z[1] = z[1]
+            self.R = np.matrix([[params.sigma_cam_i**2, 0], # measurement noise covariance matrix
+                                [0, params.sigma_cam_j**2]])
+            
+            # self.length = z[3]
+            # self.height = z[2]
             
             ############
             # TODO Step 4: initialize camera measurement including z and R 
             ############
 
-            pass
-        
             ############
             # END student code
             ############ 
