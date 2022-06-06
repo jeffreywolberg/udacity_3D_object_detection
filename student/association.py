@@ -138,7 +138,9 @@ class Association:
     
     def associate_and_update(self, manager, meas_list, KF):
         # associate measurements and tracks
+        
         self.associate(manager.track_list, meas_list, KF)
+        print("Association matrix shape, (num track, num meas):", self.association_matrix.shape)
 
         # update associated tracks with measurements
         while self.association_matrix.shape[0]>0 and self.association_matrix.shape[1]>0:
@@ -148,7 +150,7 @@ class Association:
             if np.isnan(ind_track):
                 print('---no more associations---')
                 break
-            track:Track = manager.track_list[ind_track]         
+            track:Track = manager.track_list[ind_track]
             
             # check visibility, only update tracks in fov    
             if not meas_list[0].sensor.in_fov(track.x):

@@ -129,7 +129,7 @@ class Sensor:
     def generate_measurement(self, num_frame, z, meas_list):
         # generate new measurement from this sensor and add to measurement list
         ############
-        # TODO Step 4: remove restriction to lidar in order to include camera as well
+        # Step 4: remove restriction to lidar in order to include camera as well
         ############
         
         # if self.name == 'lidar':
@@ -182,7 +182,7 @@ class Measurement:
             # self.height = z[2]
             
             ############
-            # TODO Step 4: initialize camera measurement including z and R 
+            # Step 4: initialize camera measurement including z and R 
             ############
 
             ############

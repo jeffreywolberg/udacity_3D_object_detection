@@ -55,7 +55,7 @@ data_filename = 'training_segment-1005081002024129653_5313_150_5333_150_with_cam
 # data_filename = 'training_segment-10963653239323173269_1924_000_1944_000_with_camera_labels.tfrecord' # Sequence 3
 
 # data_filename = 'training_segment-10072231702153043603_5725_000_5745_000_with_camera_labels.tfrecord'
-show_only_frames = [0, 200] # show only frames in interval for debugging
+show_only_frames = [40, 68] # show only frames in interval for debugging
 
 ## Prepare Waymo Open Dataset file for loading
 data_fullpath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'dataset', data_filename) # adjustable path in case this script is called from another working directory
@@ -242,8 +242,11 @@ while True:
                 track.set_t((cnt_frame - 1)*0.1) # save next timestamp
                 
             # associate all lidar measurements to all tracks
+            print(f"Frame {cnt_frame} has {len(meas_list_lidar)} LiDAR measurements and {len(meas_list_cam)} camera measurements")
+            print("Associating for LiDAR measurements:")
             association.associate_and_update(manager, meas_list_lidar, KF)
             
+            print("Associating for Camera measurements:")
             # associate all camera measurements to all tracks
             association.associate_and_update(manager, meas_list_cam, KF)
             

@@ -126,9 +126,11 @@ class Trackmanagement:
             if meas_list: # if not empty
                 sensor:Sensor = meas_list[0].sensor
                 if sensor.in_fov(track.x):
+                    
+                    old_score = track.score
                     track.score -= (1/params.window)
-        
-        
+                    print(f"Decreasing track score for track {track.id} from {old_score} to {track.score}")
+                    
 
             # print(track.P)
         for track in self.track_list:
