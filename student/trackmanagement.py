@@ -11,12 +11,15 @@
 #
 
 # imports
+from math import ceil
 import numpy as np
 import collections
 
 # add project directory to python path to enable relative imports
 import os
 import sys
+
+from student.measurements import Measurement, Sensor
 PACKAGE_PARENT = '..'
 SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
@@ -24,10 +27,26 @@ import misc.params as params
 
 class Track:
     '''Track class with state, covariance, id, score'''
-    def __init__(self, meas, id):
+    def __init__(self, meas : Measurement, id):
         print('creating track no.', id)
         M_rot = meas.sensor.sens_to_veh[0:3, 0:3] # rotation matrix from sensor to vehicle coordinates
+
+        self.x = np.zeros((6,1))
+        self.P = np.zeros((6,6))
         
+        pos_sens = np.zeros((4,1))
+        pos_sens[:3] = meas.z[:3]
+        pos_veh = meas.sensor.sens_to_veh * pos_sens
+        self.x[:3] = pos_veh[:3]
+
+        P_pos = M_rot * meas.R * M_rot.T
+        self.P[:3, :3] = P_pos
+
+        sigma_vx = params.sigma_p44
+        sigma_vy = params.sigma_p55
+        sigma_vz = params.sigma_p66
+        self.P[3:, 3:] = np.diag([sigma_vx, sigma_vy, sigma_vz])
+
         ############
         # TODO Step 2: initialization:
         # - replace fixed track initialization values by initialization of x and P based on 
@@ -35,20 +54,20 @@ class Track:
         # - initialize track state and track score with appropriate values
         ############
 
-        self.x = np.matrix([[49.53980697],
-                        [ 3.41006279],
-                        [ 0.91790581],
-                        [ 0.        ],
-                        [ 0.        ],
-                        [ 0.        ]])
-        self.P = np.matrix([[9.0e-02, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 9.0e-02, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 6.4e-03, 0.0e+00, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+01]])
-        self.state = 'confirmed'
-        self.score = 0
+        # self.x = np.matrix([[49.53980697],
+        #                 [ 3.41006279],
+        #                 [ 0.91790581],
+        #                 [ 0.        ],
+        #                 [ 0.        ],
+        #                 [ 0.        ]])
+        # self.P = np.matrix([[9.0e-02, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00],
+        #                 [0.0e+00, 9.0e-02, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00],
+        #                 [0.0e+00, 0.0e+00, 6.4e-03, 0.0e+00, 0.0e+00, 0.0e+00],
+        #                 [0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00, 0.0e+00],
+        #                 [0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00],
+        #                 [0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+01]])
+        self.state = 'initialized'
+        self.score = 1./params.window
         
         ############
         # END student code
@@ -99,16 +118,21 @@ class Trackmanagement:
         # - delete tracks if the score is too low or P is too big (check params.py for parameters that might be helpful, but
         # feel free to define your own parameters)
         ############
-        
         # decrease score for unassigned tracks
         for i in unassigned_tracks:
-            track = self.track_list[i]
+            track:Track = self.track_list[i]
             # check visibility    
+            # print(track.state)
             if meas_list: # if not empty
-                if meas_list[0].sensor.in_fov(track.x):
-                    # your code goes here
-                    pass 
-
+                sensor:Sensor = meas_list[0].sensor
+                if sensor.in_fov(track.x):
+                    track.score -= (1/params.window)
+            # print(track.P)
+        for track in self.track_list:
+            if track.state == 'confirmed' and track.score < params.delete_threshold:
+                self.delete_track(track)
+            if track.state != 'confirmed' and (track.P[(0,1), (0,1)] >= params.max_P).any():
+                self.delete_track(track)
         # delete old tracks   
 
         ############
@@ -133,14 +157,20 @@ class Trackmanagement:
         print('deleting track no.', track.id)
         self.track_list.remove(track)
         
-    def handle_updated_track(self, track):      
+    def handle_updated_track(self, track:Track):      
         ############
         # TODO Step 2: implement track management for updated tracks:
         # - increase track score
         # - set track state to 'tentative' or 'confirmed'
         ############
+        if track.score < 1:
+            track.score += (1/params.window)
+        if track.score > 1:
+            track.score = 1
 
-        pass
+        if track.score >= params.confirmed_threshold:
+            track.state = 'confirmed'
+        elif track.score > (1/params.window): track.state = 'tentative'
         
         ############
         # END student code
